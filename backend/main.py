@@ -1,13 +1,15 @@
 # Base
 import json
+from typing import Dict, List
 
 # Server
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 # Owned
-import consumers
+from database import redis
 from models import Event, Delivery
+import consumers
 
 app = FastAPI()
 
@@ -17,6 +19,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/deliveries/{pk}/status")
+async def get_state(pk: str) -> Dict:
+    state = redis.get(f"delivery:{pk}")
+    if state:
+        return json.loads(state)
+    return {}
 
 
 @app.post("/deliveries/create")
@@ -32,4 +42,5 @@ async def create_delivery(request: Request):
     ).save()
     # State
     state = consumers.create_delivery({}, event)
+    redis.set(f"delivery:{delivery.pk}", json.dumps(state))
     return state
