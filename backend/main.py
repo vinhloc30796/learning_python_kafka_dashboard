@@ -1,5 +1,6 @@
 # Base
 import json
+import logging
 from typing import Dict, List
 
 # Server
@@ -32,7 +33,7 @@ async def get_state(pk: str) -> Dict:
 @app.post("/deliveries/create")
 async def create_delivery(request: Request):
     body = await request.json()
-    #  Delivery
+    # Delivery
     delivery = Delivery(**body["data"]).save()
     # Event
     event = Event(
@@ -41,6 +42,23 @@ async def create_delivery(request: Request):
         data=json.dumps(body["data"]),
     ).save()
     # State
-    state = consumers.create_delivery({}, event)
+    state = consumers.CONSUMERS[event.type]({}, event)
     redis.set(f"delivery:{delivery.pk}", json.dumps(state))
     return state
+
+
+@app.post("/event")
+async def dispatch(request: Request):
+    # Historical
+    body = await request.json()
+    delivery_id = body["delivery_id"]
+    event = Event(
+        delivery_id=delivery_id,
+        type=body["type"],
+        data=json.dumps(body["data"]),
+    ).save()
+    state = await get_state(delivery_id)
+    # New state
+    new_state = consumers.CONSUMERS[event.type](state, event)
+    redis.set(f"delivery:{delivery_id}", json.dumps(new_state))
+    return new_state
