@@ -66,9 +66,22 @@ def deliver_products(
     }
 
 
+def increase_budget(
+    state: Dict,
+    event: Event,
+) -> Dict:
+    data = json.loads(event.data)
+    new_budget = state["budget"] + int(data["budget"])
+    
+    return state | {
+        "budget": new_budget,
+    }
+
+
 CONSUMERS = {
     "CREATE_DELIVERY": create_delivery,
     "START_DELIVERY": start_delivery,
     "PICKUP_PRODUCTS": pickup_products,
     "DELIVER_PRODUCTS": deliver_products,
+    "INCREASE_BUDGET": increase_budget
 }
