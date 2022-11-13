@@ -37,6 +37,7 @@ def pickup_products(
     event: Event,
 ) -> Dict:
     data = json.loads(event.data)
+    curr_quantity = state["quantity"] if "quantity" in state else 0
     new_budget = state["budget"] - int(data["purchase_price"]) * int(data["quantity"])
 
     if new_budget < 0:
@@ -45,7 +46,7 @@ def pickup_products(
     return state | {
         "budget": new_budget,
         "purchase_price": int(data["purchase_price"]),
-        "quantity": int(data["quantity"]),
+        "quantity": curr_quantity + int(data["quantity"]),
         "status": "collected",
     }
 
@@ -57,6 +58,9 @@ def deliver_products(
     data = json.loads(event.data)
     new_budget = state["budget"] + int(data["sell_price"]) * int(data["quantity"])
     new_quantity = state["quantity"] - int(data["quantity"])
+
+    if new_quantity < 0:
+        raise HTTPException(status_code=400, detail="Not enough products")
     
     return state | {
         "budget": new_budget,
