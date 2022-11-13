@@ -14,6 +14,7 @@ class Delivery(HashModel):
 
 
 class Event(HashModel):
+    created_at: int
     delivery_id: str = None
     type: str
     data: str
